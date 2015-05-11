@@ -1,4 +1,8 @@
 var Vector2 = function() {
+	
+	this.x = 0;
+	this.y = 0;
+	
 }
 
 Vector2.prototype.set = function(x,y)
@@ -43,7 +47,6 @@ Vector2.prototype.multiplyScalar = function(num)
 //Finds a random number 
 Vector2.prototype.roll = function(max, min)
 {
-//	min = typeof min !== 'undefined' ? min : 1;
 	if (typeof min == 'undefined')
 	{
 		min = 1;
