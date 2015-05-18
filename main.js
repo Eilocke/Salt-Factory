@@ -47,6 +47,7 @@ chuckNorris.src = "hero.png";
 var player = new Player();
 var keyboard = new Keyboard();
 var LAYER_COUNT = 3;
+var deltaTime = 0;
 var MAP = {tw: 60, th: 15};
 var TILE = 35;
 var TILESET_TILE = TILE*2;
@@ -65,8 +66,16 @@ var MAXDY = METER * 15;
 var ACCEL = MAXDX * 2;
 var FRICTION = MAXDX * 6;
 var JUMP = METER * 1500;
+var STATE_SPLASH = 0;
+var STATE_MENU = 1;
+var STATE_GAME = 2;
+var STATE_OVER = 3;
+var STATE_SCORE = 4;
 var tileset = document.createElement("img");
+var worldOffsetX = 0;
 tileset.src = "tileset.png";
+
+var gameState = STATE_SPLASH;
 
 // INITIALIZE FUNCTION AND COLLISION MAP
 var cells = []; 					// the array that holds our simplified collision data
@@ -140,19 +149,44 @@ function bound(value, min, max)
 // DRAWS LEVEL
 function drawMap()
 {
+	// Calculate the number of tiles that can fit on-screen (+2 for overhang)
+	var maxTiles = Math.floor(SCREEN_WIDTH / TILE) + 2;
+	// Calculate the player's current tile using its vector.
+	var tileX = pixelToTile(player.position.x);
+	// Calculate the player's offset from its current tile.
+	var offsetX = TILE + Math.floor(player.position.x%TILE);
+	// Calculate the starting tile to draw from on the x-axis. Caps off if the camera is too close
+	// to the beginning or end of the level.
+	var startX = tileX - Math.floor(maxTiles / 2);
+
+	if(startX < -1)
+	{
+		startX = 0;
+		offsetX = 0;
+	}
+	if(startX > MAP.tw - maxTiles)
+	{
+		startX = MAP.tw - maxTiles + 1;
+		offsetX = TILE;
+	}
+
+	// Calculates the amount that the world has been scrolled. Used when drawing the player.
+	var worldOffsetX = startX * TILE + offsetX;
+	
 	for(var layerIdx=0; layerIdx<LAYER_COUNT; layerIdx++)
 	{
 		var idx = 0;
 		for (var y = 0; y < level1.layers[layerIdx].height; y++)
 		{
-			for (var x = 0; x < level1.layers[layerIdx].width; x++)
+			var idx = y * level1.layers[layerIdx].width + startX;
+			for (var x = startX; x < startX + maxTiles; x++)
 			{
 				if (level1.layers[layerIdx].data[idx] != 0 )
 				{
 					var tileIndex = level1.layers[layerIdx].data[idx] - 1;
 					var sx = TILESET_PADDING + (tileIndex % TILESET_COUNT_X) * (TILESET_TILE + TILESET_SPACING);
 					var sy = TILESET_PADDING + (Math.floor(tileIndex / TILESET_COUNT_Y)) * (TILESET_TILE + TILESET_SPACING);
-					context.drawImage(tileset, sx, sy, TILESET_TILE, TILESET_TILE, x*TILE, (y-1)*TILE, TILESET_TILE, TILESET_TILE);
+					context.drawImage(tileset, sx, sy, TILESET_TILE, TILESET_TILE, (x-startX)*TILE, (y-1)*TILE, TILESET_TILE, TILESET_TILE);
 				}
 				idx++;
 			}
@@ -160,17 +194,44 @@ function drawMap()
 	}
 }
 
+function gameStateGame(deltaTime)
+{
+	player.update(deltaTime);
+	drawMap();
+	player.draw();
+}
+
 function run()
 {
+
+	var deltaTime = getDeltaTime();
 	context.fillStyle = "#ccc";		
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	
-	drawMap();
-	
-	var deltaTime = getDeltaTime();
-
-	player.update(deltaTime);
-	player.draw();
+//	switch(gameState)
+//	{
+		
+//		case STATE_SPLASH:
+//		gameStateSplash();
+//		break;
+		
+//		case STATE_MENU:
+//		gameStateMenu();
+//		break;
+		
+//		case STATE_GAME:
+		gameStateGame(deltaTime);
+//		break;
+		
+//		case STATE_OVER:
+//		gameStateOver();
+//		break;
+		
+//		case STATE_SCORE:
+//		gameStateScore();
+//		break;
+		
+//	}
 	
 	// update the frame counter 
 	fpsTime += deltaTime;
