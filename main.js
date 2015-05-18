@@ -40,15 +40,12 @@ var fps = 0;
 var fpsCount = 0;
 var fpsTime = 0;
 
-// load an image to draw
+// LOAD AN IMAGE TO DRAW
 var chuckNorris = document.createElement("img");
 chuckNorris.src = "hero.png";
-var enemySprite = document.createElement("img");
-enemySprite.src = "enemy.png";
 
 var player = new Player();
 var keyboard = new Keyboard();
-var enemy = new Enemy();
 var LAYER_COUNT = 3;
 var MAP = {tw: 60, th: 15};
 var TILE = 35;
@@ -72,9 +69,9 @@ var tileset = document.createElement("img");
 tileset.src = "tileset.png";
 
 // INITIALIZE FUNCTION AND COLLISION MAP
-var cells = []; // the array that holds our simplified collision data
+var cells = []; 					// the array that holds our simplified collision data
 function initialize() {
-	for(var layerIdx = 0; layerIdx < LAYER_COUNT; layerIdx++) { // initialize the collision map
+	for(var layerIdx = 0; layerIdx < LAYER_COUNT; layerIdx++) { 	// initialize the collision map
 		cells[layerIdx] = [];
 		var idx = 0;
 		for(var y = 0; y < level1.layers[layerIdx].height; y++) {
@@ -90,8 +87,7 @@ function initialize() {
 					cells[layerIdx][y][x+1] = 1;
 				}
 				else if(cells[layerIdx][y][x] != 1) {
-					// if we haven't set this cell's value, then set it to 0 now
-					cells[layerIdx][y][x] = 0;
+					cells[layerIdx][y][x] = 0;						// if we haven't set this cell's value, then set it to 0 now
 				}
 			idx++;
 			}
@@ -104,8 +100,7 @@ function cellAtPixelCoord(layer, x,y)
 {
 	if(x<0 || x>SCREEN_WIDTH || y<0)
 		return 1;
-	// let the player drop of the bottom of the screen (this means death)
-	if(y>SCREEN_HEIGHT)
+	if(y>SCREEN_HEIGHT)			// let the player drop of the bottom of the screen (this means death)
 		return 0;
 	return cellAtTileCoord(layer, p2t(x), p2t(y));
 };
@@ -115,8 +110,7 @@ function cellAtTileCoord(layer, tx, ty)
 {
 	if(tx<0 || tx>=MAP.tw || ty<0)
 		return 1;
-	// let the player drop of the bottom of the screen (this means death)
-	if(ty>=MAP.th)
+	if(ty>=MAP.th)				// let the player drop of the bottom of the screen (this means death)
 		return 0;
 	return cells[layer][ty][tx];
 };
