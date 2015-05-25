@@ -47,6 +47,7 @@ chuckNorris.src = "hero.png";
 var player = new Player();
 var keyboard = new Keyboard();
 var deltaTime = 0;
+var musicSwitch = false;
 var MAP = {tw: 60, th: 15};
 var TILE = 35;
 var TILESET_TILE = TILE*2;
@@ -117,6 +118,7 @@ function initialize()
 					// if we haven't set this cell's value, then set it to 0 now
 					cells[layerIdx][y][x] = 0;
 				}
+				idx++;
 			}
 		}
 	}
@@ -145,7 +147,10 @@ function initialize()
 		buffer: true,
 		volume: 0.5
 	});
+	if(musicSwitch == true)
+	{
 	musicBackground.play();
+	}
 	
 	sfxFire = new Howl(
 	{

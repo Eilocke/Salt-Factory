@@ -44,7 +44,7 @@ Enemy.prototype.update = function(deltaTime)
 	var left = false;
 	var right = false;
 	var up = false;
-	// CHECK KEYPRESS EVENTS
+
 	if (this.pause > 0)
 	{
 		this.pause -= deltaTime;
@@ -59,15 +59,17 @@ Enemy.prototype.update = function(deltaTime)
 		var nx = (this.position.x)%TILE;
 		var ny = (this.position.y)%TILE;
 		var cell = cellAtTileCoord(LAYER_PLATFORMS, tx, ty);
+		var cellleft = cellAtTileCoord(LAYER_PLATFORMS, tx - 1, ty);
 		var cellright = cellAtTileCoord(LAYER_PLATFORMS, tx + 1, ty);
 		var celldown = cellAtTileCoord(LAYER_PLATFORMS, tx, ty + 1);
-		var celldiag = cellAtTileCoord(LAYER_PLATFORMS, tx + 1, ty + 1);
-
+		var celldownright = cellAtTileCoord(LAYER_PLATFORMS, tx + 1, ty + 1);
+		var celldownleft = cellAtTileCoord(LAYER_PLATFORMS, tx - 1, ty + 1);
+		
 		if (this.moveRight = true)
 		{
-			if(celldiag && !cellright)
+			if(celldownright && !cellright)
 			{
-				ddx = ddx + ENEMY_ACCEL;	
+				ddx += ENEMY_ACCEL;	
 			}
 			else
 			{
@@ -79,16 +81,20 @@ Enemy.prototype.update = function(deltaTime)
 		
 		if(!this.moveRight)
 		{
-			if(celldown && !cell)
+			if(celldownleft && !cellleft)
+			{
+				ddx -= ENEMY_ACCEL;
+			}
+			else
 			{
 				this.velocity.x = 0;
 				this.moveRight = true;
 				this.pause = 0.5;
 			}
 		}
-		
+
+		this.velocity.x = bound(this.velocity.x + (deltaTime * ddx), -ENEMY_MAXDX, ENEMY_MAXDX);		
 		this.position.x = Math.floor(this.position.x + (deltaTime * this.velocity.x));
-		this.velocity.x = bound(this.velocity.x + (deltaTime * ddx), -ENEMY_MAXDX, ENEMY_MAXDX);
 	}
 
 	
