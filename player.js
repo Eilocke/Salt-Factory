@@ -7,45 +7,54 @@ var PLAYER_SPEED = 300;
 var ANIM_IDLE_LEFT = 0;
 var ANIM_JUMP_LEFT = 1;
 var ANIM_WALK_LEFT = 2;
-//var ANIM_SHOOT_LEFT = 3;
-//var ANIM_CLIMB = 4;
-var ANIM_IDLE_RIGHT = 3;
-var ANIM_JUMP_RIGHT = 4;
-var ANIM_WALK_RIGHT = 5;
-//var ANIM_SHOOT_RIGHT = 8;
-var ANIM_MAX = 6;
+var ANIM_SHOOT_LEFT = 3;
+var ANIM_CLIMB = 4;
+var ANIM_IDLE_RIGHT = 5;
+var ANIM_JUMP_RIGHT = 6;
+var ANIM_WALK_RIGHT = 7;
+var ANIM_SHOOT_RIGHT = 8;
+var ANIM_MAX = 9;
 
 var LEFT = 0;
 var RIGHT = 1;
+var UP = 2;
+var DOWN = 3;
 
 var Player = function() 
 {
 this.sprite = new Sprite("ChuckNorris.png");
-
-this.sprite.buildAnimation(12, 8, 165, 126, 0.05,      // idle left
-[0, 1, 2, 3, 4, 5, 6, 7]);
-
-this.sprite.buildAnimation(12, 8, 165, 126, 0.05,      // jump left
-[8, 9, 10, 11, 12]);
-
-this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
-[13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]);    // walk left
-
-this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
-[52, 53, 54, 55, 56, 57, 58, 59]);                       // idle right
-
-this.sprite.buildAnimation(12, 8, 165, 126, 0.05,        // jump right
-[60, 61, 62, 63, 64]);
-
-this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
-[65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]);    // walk right
-
-
-
-for(var i=0; i<ANIM_MAX; i++)
-{
-	this.sprite.setAnimationOffset(i, -55, -87);
-}
+        //idling left
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [0, 1, 2, 3, 4, 5, 6, 7]);
+        //jump left
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [8, 9, 10, 11, 12]);
+        //walk left
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]);
+        //shoot left
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]);
+        //climb
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51]);
+        //idle right
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [52, 53, 54, 55, 56, 57, 58, 59]);
+        //jump right
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [60, 61, 62, 63, 64]);
+        //walk right
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]);
+        //shoot right
+        this.sprite.buildAnimation(12, 8, 165, 126, 0.05,
+                [79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92]);
+ 
+        for(var i=0; i<ANIM_MAX; i++)
+        {
+                this.sprite.setAnimationOffset(i, -55, -87);
+        }
 
 
 	this.position = new Vector2();
@@ -55,6 +64,7 @@ for(var i=0; i<ANIM_MAX; i++)
 	this.velocity = new Vector2();
 	this.falling = true;
 	this.jumping = false;
+	this.cooldownTimer = 0;
 };
 
 
@@ -67,6 +77,9 @@ Player.prototype.update = function(deltaTime)
 	var left = false;
 	var right = false;
 	var jump = false;
+	var up = false;
+	var down = false;
+	var canClimb = false;
 	// CHECK KEYPRESS EVENTS
 	if(keyboard.isKeyDown(keyboard.KEY_LEFT) == true) {
 		left = true;
@@ -101,9 +114,21 @@ Player.prototype.update = function(deltaTime)
 			}
 		}
 	}
+
 	if(keyboard.isKeyDown(keyboard.KEY_SPACE) == true) {
 		jump = true;
 		}
+		
+	if(this.cooldownTimer > 0)
+	{
+		this.cooldownTimer -= deltaTime;
+	}
+	if(keyboard.isKeyDown(keyboard.KEY_SHIFT) == true && this.cooldownTimer <= 0) {
+		sfxFire.play();
+		this.cooldownTimer = 0.3;
+		//SHOOT PLACEHOLDER
+	}
+		
 
 	var wasleft = this.velocity.x < 0;
 	var wasright = this.velocity.x > 0;

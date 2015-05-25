@@ -46,7 +46,6 @@ chuckNorris.src = "hero.png";
 
 var player = new Player();
 var keyboard = new Keyboard();
-var LAYER_COUNT = 3;
 var deltaTime = 0;
 var MAP = {tw: 60, th: 15};
 var TILE = 35;
@@ -55,10 +54,6 @@ var TILESET_PADDING = 2;
 var TILESET_SPACING = 2;
 var TILESET_COUNT_X = 14;
 var TILESET_COUNT_Y = 14;
-var LAYER_COUNT = 3;
-var LAYER_BACKGOUND = 0;
-var LAYER_PLATFORMS = 1;
-var LAYER_LADDERS = 2;
 var METER = TILE;
 var GRAVITY = METER * 9.8 * 6;
 var MAXDX = METER * 10;
@@ -75,18 +70,40 @@ var tileset = document.createElement("img");
 var worldOffsetX = 0;
 tileset.src = "tileset.png";
 
+// Handles Enemies
+var ENEMY_MAXDX = METER * 5;
+var ENEMY_ACCEL = ENEMY_MAXDX * 2;
+
+var enemies = [];
+
+var LAYER_COUNT = 3;
+var LAYER_BACKGOUND = 0;
+var LAYER_PLATFORMS = 1;
+var LAYER_LADDERS = 2;
+var LAYER_OBJECT_ENEMIES = 3;
+var LAYER_OBJECT_TRIGGERS = 4; 
+
 var gameState = STATE_SPLASH;
 
-// INITIALIZE FUNCTION AND COLLISION MAP
-var cells = []; 					// the array that holds our simplified collision data
-function initialize() {
-	for(var layerIdx = 0; layerIdx < LAYER_COUNT; layerIdx++) { 	// initialize the collision map
+// INITIALIZE FUNCTION W/ COLLISION MAP
+var cells = [];
+
+var musicBackground;
+var SfxFire;
+
+function initialize()
+{
+	for(var layerIdx = 0; layerIdx < LAYER_COUNT; layerIdx++)
+	{
 		cells[layerIdx] = [];
 		var idx = 0;
-		for(var y = 0; y < level1.layers[layerIdx].height; y++) {
+		for(var y = 0; y < level1.layers[layerIdx].height; y++)
+		{
 			cells[layerIdx][y] = [];
-			for(var x = 0; x < level1.layers[layerIdx].width; x++) {
-				if(level1.layers[layerIdx].data[idx] != 0) {
+			for(var x = 0; x < level1.layers[layerIdx].width; x++)
+			{
+				if(level1.layers[layerIdx].data[idx] != 0)
+				{
 					// for each tile we find in the layer data, we need to create 4 collisions
 					// (because our collision squares are 35x35 but the tile in the
 					// level are 70x70)
@@ -95,13 +112,50 @@ function initialize() {
 					cells[layerIdx][y-1][x+1] = 1;
 					cells[layerIdx][y][x+1] = 1;
 				}
-				else if(cells[layerIdx][y][x] != 1) {
-					cells[layerIdx][y][x] = 0;						// if we haven't set this cell's value, then set it to 0 now
+				else if(cells[layerIdx][y][x] != 1)
+				{
+					// if we haven't set this cell's value, then set it to 0 now
+					cells[layerIdx][y][x] = 0;
 				}
-			idx++;
 			}
 		}
 	}
+
+	idx = 0;
+	for(var y = 0; y < level1.layers[LAYER_OBJECT_ENEMIES].height; y++)
+	{
+		for(var x = 0; x < level1.layers[LAYER_OBJECT_ENEMIES].width; x++)
+		{
+			if(level1.layers[LAYER_OBJECT_ENEMIES].data[idx] != 0)
+			{
+				// Creates enemies at spawn points
+				var px = tileToPixel(x);
+				var py = tileToPixel(y);
+				var e = new Enemy(px, py);
+				enemies.push(e);
+			}
+		idx++;
+		}
+	}
+	
+	musicBackground = new Howl(
+	{
+		urls: ["background.ogg"],
+		loop: true,
+		buffer: true,
+		volume: 0.5
+	});
+	musicBackground.play();
+	
+	sfxFire = new Howl(
+	{
+		urls: ["fireEffect.ogg"],
+		buffer: true,
+		volume: 1,
+		onend: function(){
+			isSfxPlaying = false;
+		}
+	});
 }
 
 // DETECTION BY PIXEL
@@ -109,7 +163,8 @@ function cellAtPixelCoord(layer, x,y)
 {
 	if(x<0 || x>SCREEN_WIDTH || y<0)
 		return 1;
-	if(y>SCREEN_HEIGHT)			// let the player drop of the bottom of the screen (this means death)
+	// let the player drop of the bottom of the screen (this means death)
+	if(y>SCREEN_HEIGHT)
 		return 0;
 	return cellAtTileCoord(layer, p2t(x), p2t(y));
 };
@@ -119,7 +174,8 @@ function cellAtTileCoord(layer, tx, ty)
 {
 	if(tx<0 || tx>=MAP.tw || ty<0)
 		return 1;
-	if(ty>=MAP.th)				// let the player drop of the bottom of the screen (this means death)
+	// let the player drop of the bottom of the screen (this means death)
+	if(ty>=MAP.th)
 		return 0;
 	return cells[layer][ty][tx];
 };
@@ -149,6 +205,8 @@ function bound(value, min, max)
 // DRAWS LEVEL
 function drawMap()
 {
+	
+	var startX = -1;
 	// Calculate the number of tiles that can fit on-screen (+2 for overhang)
 	var maxTiles = Math.floor(SCREEN_WIDTH / TILE) + 2;
 	// Calculate the player's current tile using its vector.
@@ -157,7 +215,7 @@ function drawMap()
 	var offsetX = TILE + Math.floor(player.position.x%TILE);
 	// Calculate the starting tile to draw from on the x-axis. Caps off if the camera is too close
 	// to the beginning or end of the level.
-	var startX = tileX - Math.floor(maxTiles / 2);
+	 startX = tileX - Math.floor(maxTiles / 2);
 
 	if(startX < -1)
 	{
@@ -171,14 +229,16 @@ function drawMap()
 	}
 
 	// Calculates the amount that the world has been scrolled. Used when drawing the player.
-	var worldOffsetX = startX * TILE + offsetX;
+	worldOffsetX = startX * TILE + offsetX;
 	
 	for(var layerIdx=0; layerIdx<LAYER_COUNT; layerIdx++)
 	{
-		var idx = 0;
+
 		for (var y = 0; y < level1.layers[layerIdx].height; y++)
 		{
+
 			var idx = y * level1.layers[layerIdx].width + startX;
+
 			for (var x = startX; x < startX + maxTiles; x++)
 			{
 				if (level1.layers[layerIdx].data[idx] != 0 )
@@ -194,11 +254,33 @@ function drawMap()
 	}
 }
 
-function gameStateGame(deltaTime)
+function masterUpdate(deltaTime)
 {
-	player.update(deltaTime);
+
+	for(var i=0; i<enemies.length; i++)
+	{
+		enemies[i].update(deltaTime);
+	}
+	player.update(deltaTime);	
+	
+}
+
+function masterDraw()
+{
+	for(var i=0; i<enemies.length; i++)
+	{
+		enemies[i].draw(deltaTime);
+	}
 	drawMap();
 	player.draw();
+}
+
+function gameStateGame(deltaTime)
+{
+
+masterUpdate(deltaTime);
+masterDraw(deltaTime);
+
 }
 
 function run()
