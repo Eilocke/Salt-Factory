@@ -46,8 +46,11 @@ chuckNorris.src = "hero.png";
 
 var player = new Player();
 var keyboard = new Keyboard();
+var vectorHandler = new Vector2();
 var deltaTime = 0;
 var musicSwitch = false;
+var score = 0;
+var BULLET_SPEED = 300;
 var MAP = {tw: 60, th: 15};
 var TILE = 35;
 var TILESET_TILE = TILE*2;
@@ -55,20 +58,24 @@ var TILESET_PADDING = 2;
 var TILESET_SPACING = 2;
 var TILESET_COUNT_X = 14;
 var TILESET_COUNT_Y = 14;
+var lives = 3;
 var METER = TILE;
 var GRAVITY = METER * 9.8 * 6;
+var CLIMB_SPEED = METER * 3;
 var MAXDX = METER * 10;
 var MAXDY = METER * 15;
 var ACCEL = MAXDX * 2;
 var FRICTION = MAXDX * 6;
-var JUMP = METER * 1500;
+var JUMP = METER * 3000;
 var STATE_SPLASH = 0;
 var STATE_MENU = 1;
 var STATE_GAME = 2;
 var STATE_OVER = 3;
 var STATE_SCORE = 4;
+var STATE_WIN = 5;
 var tileset = document.createElement("img");
 var worldOffsetX = 0;
+var splashTimer = 3;
 tileset.src = "tileset.png";
 
 // Handles Enemies
@@ -91,6 +98,8 @@ var cells = [];
 
 var musicBackground;
 var SfxFire;
+var SfxJump;
+var SfxDeath;
 
 function initialize()
 {
@@ -139,7 +148,29 @@ function initialize()
 		idx++;
 		}
 	}
-	
+	cells[LAYER_OBJECT_TRIGGERS] = [];
+	idx = 0;
+	for(var y = 0; y < level1.layers[LAYER_OBJECT_TRIGGERS].height; y++)
+	{
+		cells[LAYER_OBJECT_TRIGGERS][y] = [];
+		for(var x = 0; x < level1.layers[LAYER_OBJECT_TRIGGERS].width; x++)
+		{
+			if(level1.layers[LAYER_OBJECT_TRIGGERS].data[idx] != 0)
+			{
+				cells[LAYER_OBJECT_TRIGGERS][y][x] = 1;
+				cells[LAYER_OBJECT_TRIGGERS][y-1][x] = 1;
+				cells[LAYER_OBJECT_TRIGGERS][y-1][x+1] = 1;
+				cells[LAYER_OBJECT_TRIGGERS][y][x+1] = 1;
+			}
+			else if(cells[LAYER_OBJECT_TRIGGERS][y][x] != 1)
+			{
+				// if we haven't set this cell's value, then set it to 0 now
+				cells[LAYER_OBJECT_TRIGGERS][y][x] = 0;
+			}
+		idx++;
+		}
+	}
+
 	musicBackground = new Howl(
 	{
 		urls: ["background.ogg"],
@@ -147,11 +178,15 @@ function initialize()
 		buffer: true,
 		volume: 0.5
 	});
-	if(musicSwitch == true)
+	sfxWin = new Howl(
 	{
-	musicBackground.play();
-	}
-	
+		urls: ["win.wav"],
+		buffer: true,
+		volume: 1,
+		onend: function(){
+			isSfxPlaying = false;
+		}
+	});	
 	sfxFire = new Howl(
 	{
 		urls: ["fireEffect.ogg"],
@@ -161,8 +196,48 @@ function initialize()
 			isSfxPlaying = false;
 		}
 	});
+	sfxDeath = new Howl(
+	{
+		urls: ["death.mp3"],
+		buffer: true,
+		volume: 0.25,
+		onend: function(){
+			isSfxPlaying = false;
+		}
+	});
+	sfxJump = new Howl(
+	{
+		urls: ["jumping.wav"],
+		buffer: true,
+		volume: 0.5,
+		onend: function(){
+			isSfxPlaying = false;
+		}
+	});
 }
 
+var trackStop = false;
+
+function drawLives()
+{
+
+	heartImage = document.createElement("img");
+	heartImage.src = "heart.png";	
+	context.drawImage(heartImage, 7, 6);
+
+	if(lives == 0)
+	{
+		gameState = STATE_OVER;
+	}
+	else if(lives >= 2)
+	{
+		context.drawImage(heartImage, 80, 5);
+		if(lives == 3)
+		{
+		context.drawImage(heartImage, 153, 5);
+		}
+	}
+}
 // DETECTION BY PIXEL
 function cellAtPixelCoord(layer, x,y)
 {
@@ -259,24 +334,64 @@ function drawMap()
 	}
 }
 
+var bullets = [];
+
 function masterUpdate(deltaTime)
 {
 
 	for(var i=0; i<enemies.length; i++)
 	{
 		enemies[i].update(deltaTime);
+		
+		if(player.position.intersects(enemies[i].position.x, enemies[i].position.y, TILE, TILE,
+										player.position.x, player.position.y, player.width, player.height))
+			{
+				player.kill();
+			}
 	}
-	player.update(deltaTime);	
-	
+	for(var b = 0; b < bullets.length; b++)
+	{
+
+		bullets[b].update(deltaTime);
+		bullets[b].draw();
+
+		for(var e = 0; e < enemies.length; e++)
+		{
+			
+			// I can't splice the bullet here, because it breaks the intersects function. I don't know why, since the splice happens at the end of the function and
+			// it should just move on to the next index, but it does. I added the "depleted" variable, which just splices the bullet further down the line. 
+					
+			if(bullets[b].position.intersects(bullets[b].position.x, bullets[b].position.y, TILE, TILE,
+												enemies[e].position.x, enemies[e].position.y,  TILE, TILE))
+			{
+			
+				bullets[b].depleted = true;
+				enemies.splice(e, 1);
+				sfxDeath.play();
+				score += 1;
+				
+			}
+		} 
+		if (bullets[b].position.x < worldOffsetX || bullets[b].position.x > worldOffsetX + SCREEN_WIDTH || bullets[b].depleted)
+		{
+			bullets.splice(b, 1);
+		}
+	}
+	player.update(deltaTime);
+	 
 }
 
 function masterDraw()
 {
-	for(var i=0; i<enemies.length; i++)
+	drawMap();
+	for(var i = 0; i<enemies.length; i++)
 	{
 		enemies[i].draw(deltaTime);
 	}
-	drawMap();
+	for(var i = 0; i< bullets.length; i++)
+	{
+		bullets[i].draw();
+	}
 	player.draw();
 }
 
@@ -288,37 +403,93 @@ masterDraw(deltaTime);
 
 }
 
+function gameStateSplash(deltaTime)
+{
+
+splashImage = document.createElement("img");
+splashImage.src = "splash.png";	
+context.drawImage(splashImage, 0, 0);
+splashTimer -= deltaTime;
+
+if(splashTimer < 0)
+{
+	gameState = STATE_GAME;
+	musicBackground.play();
+}
+
+}
+
+function gameStateOver()
+{
+
+if(trackStop == false)
+{
+	trackStop = true;
+	musicBackground.stop();
+}
+
+gameoverImage = document.createElement("img");
+gameoverImage.src = "rip.png";	
+context.drawImage(gameoverImage, 0, 0);
+
+}
+function gameStateWin()
+{
+
+if(trackStop == false)
+{
+	trackStop = true;
+	musicBackground.stop();
+	sfxWin.play();
+}
+
+winImage = document.createElement("img");
+winImage.src = "win.png";	
+context.drawImage(winImage, 0, 0);
+
+}
+
 function run()
 {
 
 	var deltaTime = getDeltaTime();
-	context.fillStyle = "#ccc";		
+	context.fillStyle = "#A9F5F2";		
 	context.fillRect(0, 0, canvas.width, canvas.height);
+
+	var px = pixelToTile(player.position.x);
+	var py = pixelToTile(player.position.y);	
+	var trigcell = cellAtTileCoord(LAYER_OBJECT_TRIGGERS, px, py);
+	var trigright = cellAtTileCoord(LAYER_OBJECT_TRIGGERS, px + 1, py);
+	var trigdown = cellAtTileCoord(LAYER_OBJECT_TRIGGERS, px, py + 1);
+	var trigdiag = cellAtTileCoord(LAYER_OBJECT_TRIGGERS, px + 1, py + 1);
 	
-//	switch(gameState)
-//	{
+	if((trigcell || trigdiag || trigright || trigdown) && px > 0 && py > 0)
+	{
 		
-//		case STATE_SPLASH:
-//		gameStateSplash();
-//		break;
+		gameState = STATE_WIN;
+			
+	}
+	
+	switch(gameState)
+	{
 		
-//		case STATE_MENU:
-//		gameStateMenu();
-//		break;
-		
-//		case STATE_GAME:
+		case STATE_SPLASH:
+		gameStateSplash(deltaTime);
+		break;
+				
+		case STATE_GAME:
 		gameStateGame(deltaTime);
-//		break;
+		break;
 		
-//		case STATE_OVER:
-//		gameStateOver();
-//		break;
+		case STATE_OVER:
+		gameStateOver();
+		break;
 		
-//		case STATE_SCORE:
-//		gameStateScore();
-//		break;
-		
-//	}
+		case STATE_WIN:
+		gameStateWin();
+		break;
+				
+	}
 	
 	// update the frame counter 
 	fpsTime += deltaTime;
@@ -333,8 +504,19 @@ function run()
 	// draw the FPS
 	context.fillStyle = "#f00";
 	context.font="14px Arial";
-	context.fillText("FPS: " + fps, 5, 20, 100);
-}
+	context.fillText("FPS: " + fps, 580, 20, 100);
+	if(gameState == STATE_GAME)
+	{
+		hudImage = document.createElement("img");
+		hudImage.src = "hud1.png";	
+		context.drawImage(hudImage, 0, 0);
+		drawLives();
+		context.fillStyle = "#f00";
+		context.font="70px Arial";
+		context.fillText(score, 190, 470, 610);
+	}
+
+	}
 
 initialize();
 

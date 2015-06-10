@@ -29,6 +29,8 @@ var Enemy = function(px, py)
 	this.position = new Vector2();
 	this.position.set(px, py);
 	this.velocity = new Vector2();
+	this.width = 159;
+	this.height = 163;
 
 	this.moveRight = true;
 	this.pause = 0;
@@ -59,15 +61,13 @@ Enemy.prototype.update = function(deltaTime)
 		var nx = (this.position.x)%TILE;
 		var ny = (this.position.y)%TILE;
 		var cell = cellAtTileCoord(LAYER_PLATFORMS, tx, ty);
-		var cellleft = cellAtTileCoord(LAYER_PLATFORMS, tx - 1, ty);
 		var cellright = cellAtTileCoord(LAYER_PLATFORMS, tx + 1, ty);
 		var celldown = cellAtTileCoord(LAYER_PLATFORMS, tx, ty + 1);
-		var celldownright = cellAtTileCoord(LAYER_PLATFORMS, tx + 1, ty + 1);
-		var celldownleft = cellAtTileCoord(LAYER_PLATFORMS, tx - 1, ty + 1);
+		var celldiag = cellAtTileCoord(LAYER_PLATFORMS, tx + 1, ty + 1);
 		
-		if (this.moveRight = true)
+		if (this.moveRight)
 		{
-			if(celldownright && !cellright)
+			if(celldiag && !cellright)
 			{
 				ddx += ENEMY_ACCEL;	
 			}
@@ -81,7 +81,7 @@ Enemy.prototype.update = function(deltaTime)
 		
 		if(!this.moveRight)
 		{
-			if(celldownleft && !cellleft)
+			if(celldown && !cell)
 			{
 				ddx -= ENEMY_ACCEL;
 			}

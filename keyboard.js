@@ -8,6 +8,7 @@ var Keyboard = function() {
 	this.keys = new Array();
 	
 	// Key Constants
+	this.KEY_R = 82;
 	this.KEY_SPACE = 32;
 	this.KEY_LEFT = 37;
 	this.KEY_UP = 38;
